@@ -45,7 +45,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdjacencyInfo.cs" />
     <Compile Include="GraphFileFormat.cs" />
     <Compile Include="GraphNode.cs" />
     <Compile Include="MainForm.cs">

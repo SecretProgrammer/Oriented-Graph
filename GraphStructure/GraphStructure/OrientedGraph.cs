@@ -33,6 +33,7 @@ namespace GraphStructure
 
         // TODO
         // public GraphNode<T> this[string name]
+        // throw new KeyNotFoundException
 
         public bool this[int vertexFrom, int vertexTo]
         {
