@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace GraphStructure
@@ -12,11 +10,11 @@ namespace GraphStructure
     class OrientedGraph<T>
     {
         /// <summary>
-        /// Матрица смежности
+        /// Матрица смежности графа
         /// </summary>
-        bool[,] adjacencyMatrix;
+        bool[,] adjacencyMatrix; 
         GraphNode<T>[] verticesInfo;
-
+        
         public OrientedGraph(int verticesCount)
         {
             adjacencyMatrix = new bool[verticesCount, verticesCount];
@@ -25,26 +23,51 @@ namespace GraphStructure
 
         public int VerticesCount => adjacencyMatrix.GetLength(0);
 
-        public GraphNode<T> this[int vertex]
+        public GraphNode<T> this[int vertexIndex]
         {
-            get { return verticesInfo[vertex]; }
-            set { verticesInfo[vertex] = value; }
+            get { return verticesInfo[vertexIndex]; }
+            set { verticesInfo[vertexIndex] = value; }
         }
 
-        // TODO
-        // public GraphNode<T> this[string name]
-        // throw new KeyNotFoundException
-
+        public GraphNode<T> this[string name]
+        {
+            get
+            {                
+                for ( int p = 0; p < VerticesCount; p++ )
+                {
+                    if ( verticesInfo[p].Name == name )
+                    {
+                        return verticesInfo[p];
+                    }
+                }
+                throw new KeyNotFoundException();
+            }
+            set
+            {
+                for ( int p = 0; p < VerticesCount; p++ )
+                {
+                    if ( verticesInfo[p].Name == name )
+                    {
+                        verticesInfo[p] = value;
+                    }
+                }
+                throw new KeyNotFoundException();
+            }
+        }
+        
         public bool this[int vertexFrom, int vertexTo]
         {
             get { return adjacencyMatrix[vertexFrom, vertexTo]; }
             set { adjacencyMatrix[vertexFrom, vertexTo] = value; }
         }
 
-        public bool DFS(T soughtValue)
+        /// <summary>
+        /// Обход графа в глубину
+        /// </summary>        
+        public bool DFS(int soughtValue)
         {
             bool[] hasVisited = new bool[VerticesCount];
-
+            
             for ( int p = 0; p < VerticesCount; p++ )
             {
                 if ( !hasVisited[p] )
@@ -58,7 +81,7 @@ namespace GraphStructure
             return false;
         }
 
-        private bool DFS(int vertexIndex, bool[] hasVisited, T soughtValue)
+        private bool DFS(int vertexIndex, bool[] hasVisited, int soughtValue)
         {
             hasVisited[vertexIndex] = true;
             Debug.WriteLine($"(DFS) Посещаем вершину {verticesInfo[vertexIndex].Name}");
@@ -80,7 +103,10 @@ namespace GraphStructure
             return false;
         }
 
-        public bool BFS(T soughtValue)
+        /// <summary>
+        /// Обход графа в ширину
+        /// </summary>
+        public bool BFS(int soughtValue)
         {
             bool[] hasVisited = new bool[VerticesCount];
             Queue<int> queue = new Queue<int>();
@@ -113,6 +139,94 @@ namespace GraphStructure
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Сумма графов, содержащих в вершинах int-значения.
+        /// Число вершин исходных графов должно быть одинаковым.
+        /// </summary>        
+        public OrientedGraph<T> Union( OrientedGraph<T> second, Func<T,T,T> addFunc )
+        {
+            int minNodes = Math.Min(VerticesCount, second.VerticesCount);
+            int maxNodes = Math.Max(VerticesCount, second.VerticesCount);
+
+            OrientedGraph<T> graph_Union = new OrientedGraph<T>(maxNodes);
+            for ( int p = 0; p < maxNodes; p++ )
+            {
+                graph_Union.verticesInfo[p] = new GraphNode<T>("node" + p);
+            }
+
+            for ( int p = 0; p < minNodes; p++ )
+            {
+                for ( int q = 0; q < minNodes; q++ )
+                {
+                    if ( adjacencyMatrix[p, q] || second.adjacencyMatrix[p, q] )
+                    {
+                        graph_Union.adjacencyMatrix[p, q] = true;                        
+                    }
+                }
+                if ( addFunc != null )
+                {
+                    graph_Union.verticesInfo[p].Value = addFunc(verticesInfo[p].Value, second.verticesInfo[p].Value);
+                }
+            }
+            return graph_Union;
+        }
+
+        public OrientedGraph<T> Intersect( OrientedGraph<T> second, Func<T, T, T> addFunc )
+        {
+            int minNodes = Math.Min(VerticesCount, second.VerticesCount);
+
+            var graph_Intersection = new OrientedGraph<T>(minNodes);
+            for ( int p = 0; p < minNodes; p++ )
+            {
+                for ( int q = 0; q < minNodes; q++ )
+                {
+                    if ( adjacencyMatrix[p, q] && second.adjacencyMatrix[p, q] )
+                    {
+                        graph_Intersection.adjacencyMatrix[p, q] = true;                        
+                    }
+                }
+                graph_Intersection.verticesInfo[p] = new GraphNode<T>(
+                    "node" + p,
+                    addFunc == null ? default : addFunc(verticesInfo[p].Value, second.verticesInfo[p].Value)
+                );
+            }
+            return graph_Intersection;
+        }
+
+        public OrientedGraph<T> DeleteVertex(int vertexIndex)
+        {
+            var result = new OrientedGraph<T>(VerticesCount - 1);
+
+            for ( int p1 = 0, p2 = 0; p1 < VerticesCount; p1++ )
+            {
+                if ( p1 != vertexIndex )
+                {
+                    result.verticesInfo[p2] = verticesInfo[p1].Clone();
+
+                    for ( int q1 = 0, q2 = 0; q1 < VerticesCount; q1++ )
+                    {
+                        if ( q1 != vertexIndex )
+                        {
+                            result.adjacencyMatrix[p2, q2] = adjacencyMatrix[p1, q1];
+                            q2++;
+                        }
+                    }
+                    p2++;
+                }
+            }
+            return result;
+        }
+
+        public static OrientedGraph<T> operator |(OrientedGraph<T> first, OrientedGraph<T> second)
+        {
+            return first.Union(second, null);
+        }
+
+        public static OrientedGraph<T> operator &(OrientedGraph<T> first, OrientedGraph<T> second)
+        {
+            return first.Intersect(second, null);
         }
 
         #region Загрузка и сохранение

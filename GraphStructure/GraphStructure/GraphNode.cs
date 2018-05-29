@@ -1,6 +1,8 @@
-﻿namespace GraphStructure
+﻿using System;
+
+namespace GraphStructure
 {
-    class GraphNode<T>
+    class GraphNode<T> : ICloneable
     {
         public string Name { get; }
         public T Value { get; set; }
@@ -14,6 +16,16 @@
         {
             Name = name;
             Value = value;
+        }
+
+        public GraphNode<T> Clone()
+        {
+            return ( GraphNode<T> )MemberwiseClone();
+        }
+
+        object ICloneable.Clone()
+        {
+            return MemberwiseClone();
         }
     }
 }
